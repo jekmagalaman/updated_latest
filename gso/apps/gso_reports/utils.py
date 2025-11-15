@@ -1,0 +1,210 @@
+from django.utils import timezone
+from datetime import datetime
+from apps.gso_accounts.models import Unit, User
+from apps.gso_requests.models import ServiceRequest
+from .models import WorkAccomplishmentReport, SuccessIndicator, IPMT
+import io
+import calendar
+import pandas as pd
+
+
+# -------------------------------
+# Normalize Reports (for Accomplishment Report)
+# -------------------------------
+def normalize_report(obj):
+    if isinstance(obj, ServiceRequest):
+        assigned = obj.assigned_personnel.all()
+        personnel_list = [p.get_full_name() or p.username for p in assigned] if assigned.exists() else ["Unassigned"]
+
+        return {
+            "type": "ServiceRequest",
+            "source": "Live",
+            "requesting_office": obj.department.name if obj.department else "",
+            "description": obj.description,
+            "unit": obj.unit.name if obj.unit else "",
+            "date": obj.created_at,
+            "personnel": personnel_list,
+            "status": obj.status,
+            "rating": getattr(obj, "rating", None),
+            "request": obj,
+        }
+
+    elif isinstance(obj, WorkAccomplishmentReport):
+        date_value = obj.date_started
+        if isinstance(date_value, datetime) and timezone.is_naive(date_value):
+            date_value = timezone.make_aware(date_value)
+        elif not isinstance(date_value, datetime):
+            date_value = timezone.make_aware(datetime.combine(date_value, datetime.min.time()))
+
+        assigned = obj.assigned_personnel.all()
+        if assigned.exists():
+            personnel_list = [p.get_full_name() or p.username for p in assigned]
+        elif obj.personnel_names:
+            personnel_list = [n.strip() for n in obj.personnel_names.split(",") if n.strip()]
+        else:
+            personnel_list = ["Unassigned"]
+
+        return {
+            "type": "WorkAccomplishmentReport",
+            "source": "Live" if obj.request else "Migrated",
+            "requesting_office": (
+                obj.request.department.name if obj.request and obj.request.department
+                else obj.requesting_office_name or ""
+            ),
+            "description": obj.description,
+            "unit": obj.request.unit.name if obj.request and obj.request.unit else (obj.unit.name if obj.unit else ""),
+            "date": date_value,
+            "personnel": personnel_list,
+            "status": obj.status or "Completed",
+            "rating": getattr(obj, "rating", None),
+            "request": obj.request,
+            "success_indicator": obj.success_indicator,
+        }
+
+
+# -------------------------------
+# Collect IPMT Reports (based on WAR Success Indicators)
+# -------------------------------
+def collect_ipmt_reports(year: int, month_num: int, unit_name: str = None, personnel_names: list = None):
+    from apps.ai_service.tasks import generate_ipmt_summary
+    """
+    Collect IPMT preview rows using the success indicator directly from WARs.
+
+    Returns a list of dicts per personnel:
+    [
+        {
+            "personnel": str,
+            "rows": [
+                {
+                    "indicator": str,
+                    "description": str,
+                    "remarks": str,
+                    "war_ids": list
+                }
+            ]
+        }
+    ]
+    """
+
+    result = []
+
+    # 1. Get unit
+    try:
+        unit = Unit.objects.get(name__iexact=unit_name)
+    except Unit.DoesNotExist:
+        return []
+
+    # 2. Filter personnel
+    if personnel_names and "all" not in [p.lower() for p in personnel_names]:
+        users = User.objects.filter(
+            first_name__in=[p.split()[0].capitalize() for p in personnel_names],
+            unit=unit
+        )
+    else:
+        users = User.objects.filter(unit=unit, role="personnel")
+
+    # 3. Filter WARs for this unit/month
+    wars = WorkAccomplishmentReport.objects.filter(
+        unit=unit,
+        date_started__year=year,
+        date_started__month=month_num
+    ).prefetch_related("assigned_personnel", "success_indicator")
+
+    for user in users:
+        personnel_rows = []
+
+        # Get all WARs assigned to this user
+        user_wars = [w for w in wars if user in w.assigned_personnel.all()]
+
+        # Group WARs by their success indicator
+        grouped = {}
+        for w in user_wars:
+            indicator_name = w.success_indicator.name if w.success_indicator else "Unspecified Indicator"
+            grouped.setdefault(indicator_name, []).append(w)
+
+        # Build rows for each indicator
+        for indicator_name, war_list in grouped.items():
+            if len(war_list) == 1:
+                description = war_list[0].description
+                war_ids = [war_list[0].id]
+            else:
+                war_descriptions = [w.description for w in war_list if w.description]
+                description = generate_ipmt_summary(indicator_name, war_descriptions)
+                war_ids = [w.id for w in war_list]
+
+            personnel_rows.append({
+                "indicator": indicator_name,
+                "description": description,
+                "remarks": description,
+                "war_ids": war_ids
+            })
+
+        result.append({
+            "personnel": user.get_full_name() or user.username,
+            "rows": personnel_rows
+        })
+
+    return result
+
+
+# -------------------------------
+# Generate IPMT Excel
+# -------------------------------
+def generate_ipmt_excel(month_filter: str, unit_name: str = None, personnel_names: list = None):
+    """
+    Generate an Excel file for IPMT reports.
+    - One sheet per personnel
+    - Columns: Indicator, Accomplishment, Remarks
+    """
+    try:
+        year, month_num = map(int, month_filter.split("-"))  # expects "YYYY-MM"
+    except ValueError:
+        raise ValueError("Month filter must be in 'YYYY-MM' format.")
+
+    if not personnel_names or "all" in [p.lower() for p in personnel_names]:
+        personnel_names = set()
+        wars = WorkAccomplishmentReport.objects.filter(
+            date_started__year=year,
+            date_started__month=month_num,
+        )
+        if unit_name and unit_name.lower() != "all":
+            wars = wars.filter(unit__name__iexact=unit_name)
+        for war in wars:
+            for p in war.assigned_personnel.all():
+                personnel_names.add(p.get_full_name() or p.username)
+        personnel_names = list(personnel_names)
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+        for person in personnel_names:
+            reports = collect_ipmt_reports(year, month_num, unit_name, [person])
+            rows = []
+            for r in reports:
+                rows.extend(r["rows"])
+
+            df = pd.DataFrame(rows)
+
+            if df.empty:
+                df = pd.DataFrame([{"indicator": "N/A", "description": "No reports", "remarks": ""}])
+
+            df = df.rename(columns={
+                "indicator": "Success Indicator",
+                "description": "Accomplishment",
+                "remarks": "Remarks"
+            })
+
+            sheet_title = (person[:30] if len(person) > 30 else person) or "Unassigned"
+            df.to_excel(writer, index=False, sheet_name=sheet_title)
+
+            worksheet = writer.sheets[sheet_title]
+            worksheet.write(0, 4, f"Month: {calendar.month_name[month_num]} {year}")
+            worksheet.write(1, 4, f"Personnel: {person}")
+            if unit_name:
+                worksheet.write(2, 4, f"Unit: {unit_name}")
+
+    buffer.seek(0)
+
+    from openpyxl import load_workbook
+    wb = load_workbook(buffer)
+
+    return wb

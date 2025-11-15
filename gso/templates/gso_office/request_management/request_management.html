@@ -1,0 +1,127 @@
+{% extends "gso_office/gso_base_dashboard.html" %}
+{% block title %}Request Management{% endblock %}
+
+
+<!-- ===== HEADER ===== -->
+{% block page_header %}
+<h1 class="page-title mb-0">Request Management</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+  <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All Units</option>
+    {% for unit in units %}
+      <option value="{{ unit.id }}" {% if unit_filter|stringformat:"s" == unit.id|stringformat:"s" %}selected{% endif %}>
+        {{ unit.name|title }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+{% endblock %}
+
+
+
+{% block main_content %}
+<!-- ===== REQUEST TABLE ===== -->
+<div class="table-responsive">
+  <table class="table align-middle table-hover request-table">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Requestor</th>
+        <th>Department</th>
+        <th>Unit</th>
+        <th>Personnel</th>
+        <th>Status</th>
+        <th class="text-center">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests %}
+      <tr class="request-row">
+        <td>#{{ req.id }}</td>
+        <td>{{ req.created_at|date:"M d, Y" }}</td>
+        <td>{{ req.custom_full_name|default:req.requestor.username }}</td>
+        <td class="fw-semibold text-dark">{{ req.requestor.department }}</td>
+        <td>{{ req.unit.name }}</td>
+        <td>{{ req.assigned_personnel_names|default:"— Unassigned —" }}</td>
+        <td>
+          <span class="status-badge {% if req.status == 'Pending' %}pending
+                                    {% elif req.status == 'Approved' %}approved
+                                    {% elif req.status == 'In Progress' %}in-progress
+                                    {% elif req.status == 'Done for Review' %}review
+                                    {% elif req.status == 'Completed' %}completed
+                                    {% elif req.status == 'Cancelled' %}cancelled
+                                    {% elif req.status == 'Emergency' %}emergency
+                                    {% endif %}">
+            {{ req.status }}
+          </span>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-primary px-2"
+                  onclick="openModalWithUrl('{{ req.id }}')">
+            <i class="bi bi-eye"></i> View
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">
+          <i class="bi bi-inbox"></i> No requests found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== MODAL (dynamic content) ===== -->
+<div class="modal fade" id="requestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <!-- content loaded via AJAX -->
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCRIPT ===== -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = new bootstrap.Modal(document.getElementById('requestModal'));
+  const modalContent = document.querySelector('#requestModal .modal-content');
+
+  // expose function globally for inline onclick
+  window.openModalWithUrl = function(requestId) {
+    fetch(`/gso_requests/${requestId}/`)
+      .then(response => response.text())
+      .then(html => {
+        modalContent.innerHTML = html;
+        modal.show();
+        history.pushState({ modalOpen: true }, '', `/gso_requests/${requestId}/`);
+      })
+      .catch(err => console.error('Error loading modal:', err));
+  }
+
+  // When modal closes, revert URL
+  document.getElementById('requestModal').addEventListener('hidden.bs.modal', () => {
+    if (history.state?.modalOpen) history.pushState({}, '', '/gso_requests/');
+  });
+
+  // Handle browser back/forward buttons
+  window.addEventListener('popstate', (event) => {
+    if (!event.state?.modalOpen) modal.hide();
+  });
+
+  // Auto-open modal if user loaded a detail URL directly
+  const match = window.location.pathname.match(/\/gso_requests\/(\d+)\/$/);
+  if (match) openModalWithUrl(match[1]);
+});
+</script>
+
+
+
+
+{% endblock %}

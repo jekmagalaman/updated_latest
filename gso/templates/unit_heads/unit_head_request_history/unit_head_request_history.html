@@ -1,0 +1,86 @@
+{% extends "unit_heads/unit_head_base_dashboard.html" %}
+
+{% block title %}Request History{% endblock %}
+
+
+
+{% block page_header %}
+<h1 class="page-title mb-0">Request History</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get" class="d-flex gap-2 align-items-center">
+  <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">All Status</option>
+      <option value="Completed" {% if request.GET.status == 'Completed' %}selected{% endif %}>Completed</option>
+      <option value="Cancelled" {% if request.GET.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+  </select>
+</form>
+{% endblock %}
+
+
+
+{% block main_content %}
+
+<!-- ===== REQUEST TABLE ===== -->
+<div class="table-responsive">
+  <table class="table align-middle table-hover request-table">
+    <thead class="table-light">
+      <tr>
+        <th class="ps-3 fw-bold">Request ID</th>
+        <th class="fw-bold">Date</th>
+        <th class="fw-bold">Requesting Office</th>
+        <th class="fw-bold">Unit</th>
+        <th class="fw-bold">Assigned Personnel</th>
+        <th class="fw-bold">Status</th>
+        <th class="text-center fw-bold">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests %}
+        <tr>
+          <td class="ps-3 fw-medium text-muted">#{{ req.id }}</td>
+          <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
+          <td class="fw-semibold">{{ req.requestor.department }}</td>
+          <td>{{ req.unit.name }}</td>
+          <td>{{ req.assigned_personnel_names|default:"— Unassigned —" }}</td>
+          <td>
+            {% if req.status == "Pending" %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% elif req.status == "Approved" %}
+              <span class="badge bg-info text-dark">Approved</span>
+            {% elif req.status == "In Progress" %}
+              <span class="badge bg-primary">In Progress</span>
+            {% elif req.status == "Done for Review" %}
+              <span class="badge bg-secondary">Done for Review</span>
+            {% elif req.status == "Completed" %}
+              <span class="badge bg-success">Completed</span>
+            {% elif req.status == "Cancelled" %}
+              <span class="badge bg-danger">Cancelled</span>
+            {% else %}
+              <span class="badge bg-light text-dark">{{ req.status }}</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <a href="{% url 'gso_requests:unit_head_request_detail' req.id %}" class="btn btn-sm btn-outline-primary px-2">
+              <i class="bi bi-eye"></i> View
+            </a>
+          </td>
+          
+        </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted py-4">
+          <i class="bi bi-inbox"></i> No requests found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+
+

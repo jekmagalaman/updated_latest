@@ -1,0 +1,109 @@
+{% extends "gso_office/gso_base_dashboard.html" %}
+
+{% block title %}Account Management{% endblock %}
+
+
+
+<!-- ===== HEADER ===== -->
+{% block page_header %}
+<h1 class="page-title mb-0">Account Management</h1>
+{% endblock %}
+
+{% block page_filter %}
+<div class="d-flex gap-2">
+    <!-- Search + Status Filter -->
+    <form method="get" action="{% url 'gso_accounts:account_management' %}" class="d-flex gap-2">
+        <input 
+            type="text" 
+            name="q" 
+            class="form-control form-control-sm" 
+            placeholder="Search users..." 
+            value="{{ request.GET.q|default:'' }}"
+            autocomplete="off"
+        >
+
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">All Status</option>
+            <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </form>
+
+    <!-- Add Account Button -->
+    <a href="{% url 'gso_accounts:add_user' %}" class="btn btn-success btn-sm">+ Add Account</a>
+</div>
+{% endblock %}
+ 
+
+{% block main_content %}
+<div class="account-management">
+
+  <!-- ===== TABLE ===== -->
+  <div class="table-responsive">
+    <table class="table align-middle table-hover request-table">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 5%;">#</th>
+          <th>USER</th>
+          <th>ROLE</th>
+          <th>UNIT</th>
+          <th>STATUS</th>
+          <th class="text-center" style="width: 10%;">ACTION</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr class="align-middle">
+          <td>{{ forloop.counter }}</td>
+
+          <!-- USER -->
+          <td>
+            <div class="fw-semibold text-dark">
+              {% if user.role == "requestor" %}
+                {{ user.department.name }}
+              {% else %}
+                {{ user.get_full_name|default:user.username }}
+              {% endif %}
+            </div>
+            <small class="text-muted">{{ user.email|default:"No email" }}</small>
+          </td>
+
+          <!-- ROLE -->
+          <td><span class="text-capitalize">{{ user.get_role_display }}</span></td>
+
+          <!-- UNIT -->
+          <td>
+            {% if user.unit %}
+              {{ user.unit.name }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+
+          <!-- STATUS -->
+          <td>
+            {% if user.account_status == "active" %}
+                <span class="badge bg-success">Active</span>
+            {% else %}
+                <span class="badge bg-danger">Inactive</span>
+            {% endif %}
+          </td>
+
+          <!-- ACTION -->
+          <td class="text-center">
+            <a href="{% url 'gso_accounts:edit_user' user.id %}" class="btn btn-sm btn-primary">Edit</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            <i class="bi bi-person-x fs-5 d-block mb-2"></i>
+            No users found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

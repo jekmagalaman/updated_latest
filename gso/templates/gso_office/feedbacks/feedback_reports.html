@@ -1,0 +1,74 @@
+{% extends "gso_office/gso_base_dashboard.html" %}
+{% load static %}
+
+{% block title %}Feedback Reports{% endblock %}
+
+{% block main_content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>📋 Client Satisfaction Feedbacks</h4>
+    <a href="?export=true" class="btn btn-success">
+      <i class="bi bi-download"></i> Download CSV
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Request ID</th>
+          <th>Requestor Name</th>
+          <th>Requestor Email</th>
+          <th>Average Rating</th>
+          <th>Suggestions</th>
+          <th>Date Submitted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fb in feedback_list %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ fb.request.id }}</td>
+
+          <!-- ✅ Requestor Name (prefers custom_full_name if available) -->
+          <td>
+            {% if fb.request.custom_full_name %}
+              {{ fb.request.custom_full_name }}
+            {% elif fb.request.requestor %}
+              {{ fb.request.requestor.get_full_name }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- ✅ Requestor Email (prefers custom_email if available) -->
+          <td>
+            {% if fb.request.custom_email %}
+              {{ fb.request.custom_email }}
+            {% elif fb.request.requestor %}
+              {{ fb.request.requestor.email }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <!-- ✅ Average Rating -->
+          <td>{{ fb.average_rating|default:"0.00" }}</td>
+
+          <!-- ✅ Suggestions -->
+          <td>{{ fb.suggestions|default:"—" }}</td>
+
+          <!-- ✅ Date Submitted -->
+          <td>{{ fb.date_submitted|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">No feedback submissions yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

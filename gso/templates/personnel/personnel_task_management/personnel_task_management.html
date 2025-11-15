@@ -1,0 +1,100 @@
+{% extends "personnel/personnel_base_dashboard.html" %}
+
+{% block title %}Task Management{% endblock %}
+
+
+
+{% block page_header %}
+<h1 class="page-title mb-0">Task Management</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get" class="d-flex gap-2 align-items-center">
+  <!-- Search -->
+  <input 
+    type="text" 
+    name="q" 
+    class="form-control form-control-sm" 
+    placeholder="Search by description..." 
+    value="{{ request.GET.q }}"
+  >
+  <!-- Status Filter -->
+  <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All Status</option>
+    <option value="Pending" {% if request.GET.status == "Pending" %}selected{% endif %}>Pending</option>
+    <option value="Approved" {% if request.GET.status == "Approved" %}selected{% endif %}>Approved</option>
+    <option value="In Progress" {% if request.GET.status == "In Progress" %}selected{% endif %}>In Progress</option>
+    <option value="Done for Review" {% if request.GET.status == "Done for Review" %}selected{% endif %}>Done for Review</option>
+    <option value="Completed" {% if request.GET.status == "Completed" %}selected{% endif %}>Completed</option>
+    <option value="Cancelled" {% if request.GET.status == "Cancelled" %}selected{% endif %}>Cancelled</option>
+  </select>
+</form>
+{% endblock %}
+
+
+
+
+{% block main_content %}
+<!-- ===== REQUEST TABLE ===== -->
+<div class="table-responsive">
+  <table class="table align-middle table-hover request-table">
+    <thead class="table-light">
+      <tr>
+        <th class="ps-3 fw-bold text-secondary">Task ID</th>
+        <th class="fw-bold text-secondary">Date</th>
+        <th class="fw-bold text-secondary">Requesting Office</th>
+        <th class="fw-bold text-secondary">Unit</th>
+        <th class="fw-bold text-secondary">Assigned Personnel</th>
+        <th class="fw-bold text-secondary">Status</th>
+        <th class="text-center fw-bold text-secondary">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+        <tr>
+          <td class="ps-3 fw-medium text-muted">#{{ task.id }}</td>
+          <td>{{ task.created_at|date:"Y-m-d H:i" }}</td>
+          <td class="fw-semibold">{{ task.requestor.department }}</td>
+          <td>{{ task.unit|title }}</td>
+          <td>
+            {% if task.assigned_personnel.all %}
+              {% for p in task.assigned_personnel.all %}
+                {{ p.get_full_name|default:p.username }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">— Unassigned —</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge {% if task.status == 'Pending' %}pending
+                                      {% elif task.status == 'Approved' %}approved
+                                      {% elif task.status == 'In Progress' %}in-progress
+                                      {% elif task.status == 'Done for Review' %}review
+                                      {% elif task.status == 'Completed' %}completed
+                                      {% elif task.status == 'Cancelled' %}cancelled
+                                      {% elif task.status == 'Emergency' %}emergency
+                                      {% endif %}">
+              {{ task.status }}
+            </span>
+          </td>
+          <td class="text-center">
+            <a href="{% url 'gso_requests:personnel_task_detail' task.id %}" 
+                class="btn btn-sm btn-outline-primary px-2">
+              <i class="bi bi-eye"></i> View
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-inbox"></i> No tasks assigned to you.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+

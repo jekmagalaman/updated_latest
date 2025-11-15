@@ -1,0 +1,83 @@
+{% extends "personnel/personnel_base_dashboard.html" %}
+
+{% block title %}Task History{% endblock %}
+
+
+
+
+{% block page_header %}
+<h1 class="page-title mb-0">Task History</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get">
+  <input type="text" name="q" class="form-control form-control-sm" placeholder="Search..." value="{{ request.GET.q }}">
+</form>
+{% endblock %}
+
+
+
+
+
+{% block main_content %}
+
+<!-- ===== REQUEST TABLE ===== -->
+<div class="table-responsive">
+  <table class="table align-middle table-hover request-table">
+    <thead class="table-light">
+      <tr>
+        <th class="ps-3 fw-bold text-secondary text-uppercase small">Request ID</th>
+        <th class="fw-bold text-secondary text-uppercase small">Date Submitted</th>
+        <th class="fw-bold text-secondary text-uppercase small">Date Completed</th>
+        <th class="fw-bold text-secondary text-uppercase small">Requesting Office</th>
+        <th class="fw-bold text-secondary text-uppercase small">Unit</th>
+        <th class="fw-bold text-secondary text-uppercase small">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in history %}
+        <tr>
+          <td class="ps-3 fw-medium text-muted">#{{ task.id }}</td>
+          <td>{{ task.created_at|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if task.completed_at %}
+              {{ task.completed_at|date:"M d, Y H:i" }}
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ task.requestor.department }}</td>
+          <td>{{ task.unit_of_measurement|default:task.unit|title }}</td>
+          <td>
+            {% if task.status == "Pending" %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% elif task.status == "Approved" %}
+              <span class="badge bg-info text-dark">Approved</span>
+            {% elif task.status == "In Progress" %}
+              <span class="badge bg-primary">In Progress</span>
+            {% elif task.status == "Done for Review" %}
+              <span class="badge bg-secondary">Done for Review</span>
+            {% elif task.status == "Completed" %}
+              <span class="badge bg-success">Completed</span>
+            {% elif task.status == "Cancelled" %}
+              <span class="badge bg-danger">Cancelled</span>
+            {% else %}
+              <span class="badge bg-light text-dark">{{ task.status }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            <i class="bi bi-inbox"></i> No completed tasks yet.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+

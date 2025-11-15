@@ -1,0 +1,23 @@
+<div class="modal-header">
+  <h5 class="modal-title">Request #{{ req.id }}</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+  <p><strong>Date:</strong> {{ req.created_at|date:"Y-m-d" }}</p>
+  <p><strong>Requestor:</strong> {{ req.requestor.get_full_name }}</p>
+  <p><strong>Office:</strong> {{ req.requestor.department }}</p>
+  <p><strong>Unit:</strong> {{ req.unit.name }}</p>
+  <p><strong>Description:</strong> {{ req.description }}</p>
+  <p><strong>Status:</strong> {{ req.status }}</p>
+</div>
+
+<div class="modal-footer">
+    {% if user_role == "director" and req.status == "Pending" %}
+    <form method="post" action="{% url 'gso_requests:approve_request' req.id %}">
+        {% csrf_token %}
+        <button class="btn btn-success">Approve</button>
+    </form>
+    {% endif %}
+</div>
+

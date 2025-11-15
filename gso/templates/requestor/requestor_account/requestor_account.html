@@ -1,0 +1,159 @@
+{% extends "requestor/requestor_base_dashboard.html" %}
+
+{% block title %}Requestor Profile{% endblock %}
+
+{% block main_content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="fw-bold" style="color: #002e72;">ACCOUNT PROFILE</h2>
+</div>
+
+<div class="content-card mt-3 p-4 rounded-3 shadow-sm bg-white">
+  <!-- Top Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+    <h2 class="fs-4 fw-semibold text-primary mb-0 d-flex align-items-center">
+      <i data-lucide="building-2" class="me-2"></i>
+      {{ user.department }}
+    </h2>
+    <button class="btn btn-primary d-flex align-items-center gap-2 fw-semibold px-3 py-2" id="editBtn" onclick="toggleEdit()">
+      <i data-lucide="edit-3" class="w-4 h-4"></i> Edit
+    </button>
+  </div>
+
+  <!-- Profile Form -->
+  <form method="post" id="profileForm" class="needs-validation">
+    {% csrf_token %}
+    <div class="row g-3">
+      <!-- Department (read-only) -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary">Department</label>
+        <div class="form-control-plaintext bg-light rounded p-2">
+          {{ user.department }}
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary">Email (optional)</label>
+        <div id="email-display" class="form-control-plaintext bg-light rounded p-2">
+          {{ request.user.email|default:"No email provided" }}
+        </div>
+        <input type="email" class="form-control d-none" id="email-input" name="email" value="{{ request.user.email }}">
+      </div>
+
+      <!-- Role -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary">Role</label>
+        <div class="form-control-plaintext bg-light rounded p-2">
+          {{ request.user.get_role_display }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Password Section -->
+    <div class="password-section mt-4 border-top pt-4 d-none" id="passwordSection">
+      <h5 class="fw-semibold mb-3 text-primary d-flex align-items-center">
+        <i data-lucide="lock" class="me-2"></i> Change Password
+      </h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label text-secondary">Current Password</label>
+          <div class="position-relative">
+            <input type="password" name="current_password" id="current-password" class="form-control">
+            <button type="button" class="btn btn-sm btn-light border-0 position-absolute top-50 end-0 translate-middle-y me-2"
+              onclick="togglePassword('current-password')">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label text-secondary">New Password</label>
+          <div class="position-relative">
+            <input type="password" name="new_password" id="new-password" class="form-control">
+            <button type="button" class="btn btn-sm btn-light border-0 position-absolute top-50 end-0 translate-middle-y me-2"
+              onclick="togglePassword('new-password')">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label text-secondary">Confirm New Password</label>
+          <div class="position-relative">
+            <input type="password" name="confirm_password" id="confirm-password" class="form-control">
+            <button type="button" class="btn btn-sm btn-light border-0 position-absolute top-50 end-0 translate-middle-y me-2"
+              onclick="togglePassword('confirm-password')">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="mt-4 text-end">
+      <button type="submit" class="btn btn-success px-4 py-2 fw-semibold d-none" id="saveBtn">
+        <i data-lucide="save" class="me-2"></i> Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  lucide.createIcons(); // render icons when page loads
+});
+
+let isEditing = false;
+
+function toggleEdit() {
+  isEditing = !isEditing;
+
+  document.getElementById("editBtn").classList.toggle("d-none", isEditing);
+  document.getElementById("saveBtn").classList.toggle("d-none", !isEditing);
+  document.getElementById("passwordSection").classList.toggle("d-none", !isEditing);
+  document.getElementById("email-input").classList.toggle("d-none", !isEditing);
+  document.getElementById("email-display").classList.toggle("d-none", isEditing);
+
+  lucide.createIcons(); // re-render icons in case section toggles
+}
+
+function togglePassword(fieldId) {
+  const input = document.getElementById(fieldId);
+  const btn = input.nextElementSibling;
+  const icon = btn.querySelector("i");
+
+  if (input.type === "password") {
+    input.type = "text";
+    icon.setAttribute("data-lucide", "eye-off");
+  } else {
+    input.type = "password";
+    icon.setAttribute("data-lucide", "eye");
+  }
+
+  // Re-render the Lucide icon after change
+  lucide.createIcons();
+}
+</script>
+
+
+<style>
+  .form-control:focus {
+    border-color: #002e72 !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 46, 114, 0.15);
+  }
+  .btn {
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+  @media (max-width: 576px) {
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
