@@ -1,0 +1,388 @@
+{% extends "unit_heads/unit_head_base_dashboard.html" %}
+{% load custom_tags %}
+
+{% block title %}Request #{{ req.id }}{% endblock %}
+
+{% block page_header %}
+<h1 class="page-title mb-0">Request Details</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+  <a href="{% url 'gso_requests:unit_head_request_management' %}" class="btn btn-secondary">
+    Back
+  </a>
+</form>
+{% endblock %}
+
+
+
+
+
+{% block main_content %}
+
+<div class="row g-4">
+  <!-- LEFT COLUMN -->
+  <div class="col-lg-6 d-flex flex-column gap-4">
+
+    <!-- REQUEST INFO -->
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+        <i class="bi bi-info-circle me-2"></i> Request Information
+      </div>
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <p><strong>ID:</strong> #{{ req.id }}</p>
+            <p><strong>Requestor:</strong> {{ req.custom_full_name }}</p>
+            <p><strong>Department:</strong> {{ req.requestor.department }}</p>
+            <p><strong>Attachment:</strong><br>
+              {% if req.attachment %}
+                <a href="{{ req.attachment.url }}" target="_blank">
+                  <img src="{{ req.attachment.url }}" alt="Attachment"
+                       style="max-width: 220px; border-radius: 8px; cursor: pointer;">
+                </a>
+              {% else %}
+                <span class="text-muted">No attachment provided.</span>
+              {% endif %}
+            </p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Date Submitted:</strong> {{ req.created_at|date:"Y-m-d H:i" }}</p>
+            <p>
+              <strong>Status:</strong>
+              <span class="badge fs-6
+                {% if req.status == 'Completed' %}bg-success
+                {% elif req.status == 'Pending' %}bg-warning text-dark
+                {% elif req.status == 'In Progress' %}bg-info text-dark
+                {% elif req.status == 'Cancelled' %}bg-danger
+                {% else %}bg-secondary{% endif %}">
+                {{ req.status }}
+              </span>
+            </p>
+          
+            <!-- SCHEDULE INFO -->
+            {% if req.schedule_start %}
+              <p><strong>Scheduled Start:</strong> 
+                <span class="badge bg-primary">{{ req.schedule_start|date:"Y-m-d H:i" }}</span>
+              </p>
+            {% endif %}
+            {% if req.schedule_end %}
+              <p><strong>Scheduled End:</strong> 
+                <span class="badge bg-primary">{{ req.schedule_end|date:"Y-m-d H:i" }}</span>
+              </p>
+            {% endif %}
+            {% if req.schedule_remarks %}
+              <p><strong>Schedule Remarks:</strong><br>
+                <small class="text-muted">{{ req.schedule_remarks }}</small>
+              </p>
+            {% endif %}
+          
+            <p><strong>Assigned Personnel:</strong><br>
+              {% if req.assigned_personnel.all %}
+                {% for p in req.assigned_personnel.all %}
+                  <span class="badge bg-light text-dark border">
+                    <i class="bi bi-person"></i> {{ p.get_full_name|default:p.username }}
+                  </span>
+                {% endfor %}
+              {% else %}
+                <span class="text-muted">Unassigned</span>
+              {% endif %}
+            </p>
+          
+            <p><strong>Assigned Materials:</strong></p>
+            {% if req.requestmaterial_set.all %}
+              <ul class="list-unstyled ps-3 mb-0">
+                {% for rm in req.requestmaterial_set.all %}
+                  <li><i class="bi bi-box-seam text-primary"></i> {{ rm.material.name }} – {{ rm.quantity }} {{ rm.material.unit }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-muted mb-0">No materials assigned</p>
+            {% endif %}
+          </div>
+          
+        </div>
+        
+
+        {% if req.status == "Done for Review" %}
+        <form method="post" class="text-end">
+          {% csrf_token %}
+          <button type="submit" name="action" value="approve" class="btn btn-success me-2">
+            <i class="bi bi-check-circle"></i> Approve Completion
+          </button>
+          <button type="submit" name="action" value="reject" class="btn btn-danger">
+            <i class="bi bi-arrow-counterclockwise"></i> Send Back
+          </button>
+        </form>
+        {% endif %}
+
+
+        {% if req.status not in "Completed,Cancelled,Done for Review" %}
+          <form method="post" class="text-end mt-3">
+            {% csrf_token %}
+            {% if not req.is_emergency %}
+              <button type="submit" name="action" value="set_emergency" class="btn btn-danger">
+                <i class="bi bi-exclamation-triangle"></i> Mark as Emergency
+              </button>
+            {% else %}
+              <button type="submit" name="action" value="unset_emergency" class="btn btn-outline-danger">
+                <i class="bi bi-slash-circle"></i> Remove Emergency Tag
+              </button>
+            {% endif %}
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+
+
+
+    {% if req.status not in "Completed,Cancelled,Done for Review" %}
+    <!-- SCHEDULING -->
+    <form method="post" class="flex-fill">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="schedule_request">
+
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+          <i class="bi bi-calendar-event me-2"></i> Schedule Task
+        </div>
+
+        <div class="card-body">
+          <label class="form-label fw-semibold">Start Date & Time</label>
+          <input type="datetime-local" name="schedule_start"
+                value="{{ req.schedule_start|date:'M d, Y g:ia' }}"
+                class="form-control mb-3" required>
+          <label class="form-label fw-semibold">End Date & Time (Optional)</label>
+          <input type="datetime-local" name="schedule_end"
+                value="{{ req.schedule_end|date:'Y-m-d\\TH:i' }}"
+                class="form-control mb-3">
+
+          <label class="form-label fw-semibold">Remarks (Optional)</label>
+          <textarea name="schedule_remarks" class="form-control" rows="2">{{ req.schedule_remarks }}</textarea>
+        </div>
+
+        <div class="text-end p-3">
+          <button type="submit" name="action" value="save_schedule" class="btn btn-warning px-4">
+            <i class="bi bi-save me-1"></i> Save Schedule
+          </button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+
+
+
+
+
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-lg-6 d-flex flex-column gap-4">
+
+    {% if req.status not in "Completed,Cancelled,Done for Review" %}
+    <!-- ASSIGN PERSONNEL -->
+    <form method="post" class="flex-fill">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="assign_personnel">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+          <i class="bi bi-people me-2"></i> Assign Personnel
+        </div>
+        <div class="card-body" style="max-height: 320px; overflow-y: auto;">
+          {% for ps in personnel_status %}
+            <div class="form-check mb-2 border-bottom pb-2">
+              <input 
+                type="checkbox" 
+                name="personnel_ids" 
+                value="{{ ps.user.id }}" 
+                id="personnel_{{ ps.user.id }}" 
+                class="form-check-input"
+                {% if ps.user in req.assigned_personnel.all %}checked{% endif %}>
+              <label for="personnel_{{ ps.user.id }}" class="form-check-label fw-semibold">
+                {{ ps.user.get_full_name|default:ps.user.username }}
+                {% if ps.busy %}
+                  <span class="badge bg-danger ms-2">Busy</span>
+                {% endif %}
+              </label>
+
+              {% if ps.busy %}
+                <div class="small text-muted ms-4">
+                  <strong>Active Tasks:</strong>
+                  <ul class="mb-0">
+                    {% for task in ps.active_tasks %}
+                      <li>#{{ task.id }} – {{ task.status }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </div>
+          {% empty %}
+            <p class="text-muted">No personnel available.</p>
+          {% endfor %}
+        </div>
+        <div class="text-end p-3">
+          <button type="submit" name="action" value="assign_personnel" class="btn btn-primary px-4">
+            <i class="bi bi-person-check me-1"></i> Save Personnel
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- SELECT MATERIALS -->
+    <form method="post" class="flex-fill">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="assign_materials">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+          <i class="bi bi-box-seam me-2"></i> Select Materials
+        </div>
+        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+          {% if materials %}
+            <div class="table-responsive">
+              <table class="table align-middle table-sm mb-0">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th></th><th>Material</th><th>Available</th><th>Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for m in materials %}
+                    {% with assigned_qty=assigned_materials|get_item:m.id %}
+                    <tr>
+                      <td class="text-center">
+                        <input type="checkbox" name="material_ids" value="{{ m.id }}" 
+                          id="material_{{ m.id }}" class="form-check-input material-checkbox"
+                          {% if assigned_qty %}checked{% endif %}>
+                      </td>
+                      <td><label for="material_{{ m.id }}">{{ m.name }}</label></td>
+                      <td class="text-muted small">{{ m.quantity }} {{ m.unit }}</td>
+                      <td>
+                        <input type="number" name="quantity_{{ m.id }}" value="{{ assigned_qty|default:'' }}" 
+                          min="1" class="form-control form-control-sm text-center material-qty"
+                          style="max-width: 90px;" {% if not assigned_qty %}disabled{% endif %}>
+                      </td>
+                    </tr>
+                    {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No materials available.</p>
+          {% endif %}
+        </div>
+        <div class="text-end p-3">
+          <button type="submit" name="action" value="assign_materials" class="btn btn-success px-4">
+            <i class="bi bi-box-arrow-down me-1"></i> Save Materials
+          </button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+
+
+    <!-- SUCCESS INDICATOR -->
+    <div class="card shadow-sm border-0">
+      <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+        <i class="bi bi-bullseye me-2"></i> Success Indicator
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <label class="form-label fw-bold">
+            {% if war and war.success_indicator %}
+              Edit Success Indicator:
+            {% elif req.selected_indicator %}
+              Edit Temporary Success Indicator:
+            {% else %}
+              Assign Success Indicator:
+            {% endif %}
+          </label>
+          <select name="success_indicator" class="form-select" required>
+            <option value="">-- Select Indicator --</option>
+            {% for si in indicators %}
+              <option value="{{ si.id }}"
+                {% if war and war.success_indicator and war.success_indicator.id == si.id %}
+                  selected
+                {% elif req.selected_indicator and req.selected_indicator.id == si.id %}
+                  selected
+                {% endif %}>
+                {{ si.code }} - {{ si.description }}
+              </option>
+            {% endfor %}
+          </select>
+          <button type="submit" name="save_success_indicator" class="btn btn-success mt-3 px-4">
+            💾 Save Indicator
+          </button>
+        </form>
+      </div>
+    </div>
+
+
+
+
+
+    <!-- PROGRESS REPORTS -->
+    <div class="card border-0 shadow-sm flex-fill">
+      <div class="card-header text-white fw-bold" style="background-color: #002e72;">
+        <i class="bi bi-clipboard-check me-2"></i> Progress Reports
+      </div>
+      <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+        {% if reports %}
+          <div class="list-group">
+            {% for r in reports %}
+              <div class="list-group-item list-group-item-action mb-2 rounded-3 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <strong>{{ r.personnel.get_full_name|default:r.personnel.username }}</strong><br>
+                    <small>{{ r.report_text }}</small>
+                  </div>
+                  <small class="text-muted">{{ r.created_at|date:"Y-m-d H:i" }}</small>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No reports yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+
+
+
+
+
+
+  </div>
+</div>
+
+<!-- JS Validation -->
+<script>
+  document.querySelectorAll('.material-checkbox').forEach((checkbox) => {
+    const row = checkbox.closest('tr');
+    const qtyInput = row.querySelector('.material-qty');
+    const availableQty = parseInt(row.querySelector('td:nth-child(3)').innerText);
+
+    qtyInput.disabled = !checkbox.checked;
+
+    checkbox.addEventListener('change', () => {
+      qtyInput.disabled = !checkbox.checked;
+      qtyInput.value = checkbox.checked ? (qtyInput.value || 1) : "";
+    });
+
+    qtyInput.addEventListener('input', () => {
+      let val = parseInt(qtyInput.value);
+      if (val > availableQty) {
+        alert(`Cannot exceed available stock (${availableQty})`);
+        qtyInput.value = availableQty;
+      } else if (val < 1 || isNaN(val)) qtyInput.value = 1;
+    });
+  });
+</script>
+
+{% endblock %}

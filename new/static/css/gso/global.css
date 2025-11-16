@@ -1,0 +1,41 @@
+/* ===== Global Reset ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Base Styles ===== */
+html, body {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: #212529;
+    min-height: 100vh;
+}
+
+body {
+    background-color: #ffffff;
+    display: flex;
+}
+
+/* ===== Headings ===== */
+h1, h2, h3, h4, h5, h6,
+.page-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+h4 {
+    color: #1e3a8a;
+}
+
+/* ===== Form Elements ===== */
+button,
+input,
+select,
+textarea {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}

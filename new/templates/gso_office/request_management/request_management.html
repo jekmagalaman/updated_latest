@@ -1,0 +1,141 @@
+{% extends "gso_office/gso_base_dashboard.html" %}
+{% block title %}Request Management{% endblock %}
+
+{% load static %}  {# Make sure to load static before using it #}
+
+<!-- ===== HEADER ===== -->
+{% block page_header %}
+<h1 class="page-title mb-0">Request Management</h1>
+{% endblock %}
+
+{% block page_filter %}
+<!-- Unit filter -->
+<form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+  <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">All Units</option>
+    {% for unit in units %}
+      <option value="{{ unit.id }}" {% if unit_filter|stringformat:"s" == unit.id|stringformat:"s" %}selected{% endif %}>
+        {{ unit.name|title }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+{% endblock %}
+
+{% block main_content %}
+<!-- ===== REQUEST TABLE ===== -->
+<div class="table-responsive">
+  <table class="table align-middle table-hover request-table">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Requestor</th>
+        <th>Department</th>
+        <th>Unit</th>
+        <th>Personnel</th>
+        <th>Status</th>
+        <th class="text-center">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests %}
+      <tr class="request-row">
+        <td>#{{ req.id }}</td>
+        <td>{{ req.created_at|date:"M d, Y" }}</td>
+        <td>{{ req.custom_full_name|default:req.requestor.username }}</td>
+        <td class="fw-semibold text-dark">{{ req.requestor.department }}</td>
+        <td>{{ req.unit.name }}</td>
+        <td>{{ req.assigned_personnel_names|default:"— Unassigned —" }}</td>
+        <td>
+          <span class="status-badge {% if req.status == 'Pending' %}pending
+                                    {% elif req.status == 'Approved' %}approved
+                                    {% elif req.status == 'In Progress' %}in-progress
+                                    {% elif req.status == 'Done for Review' %}review
+                                    {% elif req.status == 'Completed' %}completed
+                                    {% elif req.status == 'Cancelled' %}cancelled
+                                    {% elif req.status == 'Emergency' %}emergency
+                                    {% endif %}">
+            {{ req.status }}
+          </span>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-primary px-2"
+            onclick="openModal(
+              '{{ req.id }}',
+              '{{ req.created_at|date:"Y-m-d" }}',
+              '{{ req.custom_full_name|default:req.requestor.username|escapejs }}',
+              '{{ req.requestor.department|escapejs }}',
+              '{{ req.unit.name|escapejs }}',
+              '{{ req.description|escapejs }}',
+              '{{ req.status|escapejs }}',
+              '{{ req.assigned_personnel_names|escapejs }}',
+              `{% for rm in req.requestmaterial_set.all %}{{ rm.material.name|escapejs }} ({{ rm.quantity }} {{ rm.material.unit|escapejs }}){% if not forloop.last %}, {% endif %}{% endfor %}`,
+              `{% for r in req.reports.all %}<strong>{{ r.personnel.get_full_name|escapejs }}</strong> ({{ r.created_at|date:"Y-m-d H:i" }}): {{ r.report_text|escapejs }}<br>{% endfor %}`
+            )">
+            <i class="bi bi-eye"></i> View
+          </button>
+
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">
+          <i class="bi bi-inbox"></i> No requests found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ===== MODAL (same as before) ===== -->
+<div class="modal fade" id="requestModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-semibold">
+          <i class="bi bi-file-earmark-text me-1"></i> Request Details
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="details-grid">
+          <div class="detail-item"><label>Date:</label> <span id="modal-date"></span></div>
+          <div class="detail-item"><label>Requesting Office:</label> <span id="modal-office"></span></div>
+          <div class="detail-item"><label>Requestor Name:</label> <span id="modal-requestor"></span></div>
+          <div class="detail-item"><label>Unit:</label> <span id="modal-unit"></span></div>
+          <div class="detail-item description-box"><label>Description:</label> <p id="modal-description"></p></div>
+          <div class="detail-item"><label>Assigned Personnel:</label> <span id="modal-personnel"></span></div>
+          <div class="detail-item description-box"><label>Materials:</label> <p id="modal-materials"></p></div>
+          <div class="detail-item"><label>Status:</label> <span id="modal-status"></span></div>
+          <div class="detail-item description-box"><label>Personnel Reports:</label> <div id="modal-reports"></div></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        {% if user.role == "director" %}
+        <form id="approveForm" method="POST" action="">
+          {% csrf_token %}
+          <button type="submit" class="approve-btn">
+            <i class="bi bi-check-circle me-1"></i> Approve Request
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script src="{% static 'js/gso/request_management.js' %}"></script>
+{% endblock %}
+
+{% endblock %}
+
+
+
+
+

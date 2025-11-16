@@ -1,0 +1,106 @@
+/* ===== Mobile Sidebar ===== */
+@media (max-width: 768px) {
+    .hamburger {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+    }
+  
+    .sidebar {
+      position: fixed;
+      left: -250px;
+      top: 0;
+      height: 100%;
+      width: 250px;
+      background: #1f2937;
+      transition: left 0.3s ease;
+      z-index: 1000;
+      transform: translateX(-100%);
+    }
+  
+    .sidebar.show {
+      left: 0;
+      transform: translateX(0);
+    }
+  
+    .main-content {
+      margin-left: 0 !important;
+    }
+  
+    .table-container {
+      overflow-x: auto;
+    }
+  
+    body.sidebar-overlay::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1040;
+      display: none;
+    }
+  
+    body.sidebar-overlay.sidebar-open::before {
+      display: block;
+    }
+  
+    /* ===== Request Management Mobile Card Layout ===== */
+    .table-responsive { border: none; }
+    .request-table { display: block; }
+    .request-table thead { display: none; }
+    .request-table tbody {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .request-table tr {
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
+      padding: 1rem;
+    }
+    .request-table td {
+      display: block;
+      padding: 0.25rem 0;
+      border: none;
+    }
+    .request-table td:nth-child(1) {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #1e2a38;
+    }
+    .request-table td:nth-child(2),
+    .request-table td:nth-child(3),
+    .request-table td:nth-child(4),
+    .request-table td:nth-child(5) {
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+    .request-table td:nth-child(6) {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .request-table td:nth-child(7),
+    .request-table td:nth-child(8) {
+      margin-top: 0.8rem;
+    }
+    .request-table td:nth-child(7) {
+      display: flex;
+      justify-content: flex-start;
+    }
+    .request-table td:nth-child(8) {
+      text-align: center;
+    }
+    .btn-outline-primary {
+      width: 100%;
+      border-radius: 50px;
+    }
+  
+    /* Responsive details grid */
+    .details-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  

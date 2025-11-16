@@ -1,0 +1,78 @@
+/* ===== Table Styles ===== */
+.table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table th {
+    background-color: #f8fafc;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .table td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+    color: #374151;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.2s ease;
+  }
+  
+  .table td:hover {
+    white-space: normal;
+    overflow: visible;
+  }
+  
+  .table tr:hover {
+    background-color: #f6f9ff;
+  }
+  
+  .table tr:hover {
+    background-color: #f9fafb;
+  }
+  
+  .table tbody tr {
+    transition: all 0.25s ease;
+  }
+  
+  .table tbody tr:hover {
+    background-color: #f9fafb;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 46, 114, 0.2);
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* ===== Status Badges ===== */
+  .request-table .status-badge {
+    padding: 0.25rem 0.7rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  
+  .request-table .pending { background: #facc15; color: #000; }
+  .request-table .approved { background: #3b82f6; color: #fff; }
+  .request-table .in-progress { background: #6366f1; color: #fff; }
+  .request-table .review { background: #9ca3af; color: #fff; }
+  .request-table .completed { background: #16a34a; color: #fff; }
+  .request-table .cancelled { background: #dc2626; color: #fff; }
+  .request-table .emergency { background: #ef4444; color: #fff; }
+  
